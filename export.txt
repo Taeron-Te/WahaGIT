@@ -168,20 +168,21 @@ select * from effects;
 
 CREATE TABLE public.ranks(
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
-	name text NOT NULL
+	name text NOT NULL,
+	powerRatio float NOT NULL
 );
 
-INSERT INTO public.ranks(name) VALUES
-('Alpha'),
-('Beta'),
-('Gamma'),
-('Delta'),
-('Epsilon'),
-('Zeta'),
-('Etta')
+INSERT INTO public.ranks(name, powerRatio) VALUES
+('Alpha', 50),
+('Beta', 10),
+('Gamma', 4),
+('Delta', 2),
+('Epsilon', 1.2),
+('Zeta', 1),
+('Etta', 0.7)
 ;
 
-select * from ranks;
+SELECT * FROM ranks;
 
 CREATE TABLE public.magicSchools(
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
@@ -244,3 +245,85 @@ INSERT INTO public.magicAbility(name, skillPointPrice,  magicSchool, castPrice, 
 ;
 
 select * from magicAbility;
+
+CREATE FUNCTION mana (mentalStength int, curRank int) returns int
+AS $$
+BEGIN 
+	RETURN (mentalStength * (SELECT powerratio FROM public.ranks WHERE id = curRank))::int;
+END
+$$ LANGUAGE 'plpgsql';	
+
+CREATE TABLE spellBook (
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
+	idMAbility int[]
+);
+
+CREATE OR REPLACE FUNCTION public.checkSpellId()
+    RETURNS trigger
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE NOT LEAKPROOF
+AS $BODY$
+declare
+  i integer;
+begin
+  if NEW.idMAbility is not null then
+  foreach i in array NEW.idMAbility
+  loop
+    if not exists (select id from public.magicability where id = i)
+      then raise exception 'spell doesn''t exist';
+    end if;
+  end loop;
+  end if;
+  return NEW;
+end
+$BODY$;
+
+ALTER FUNCTION public.checkSpellId()
+    OWNER TO postgres;
+	
+CREATE OR REPLACE TRIGGER spellBookChecker
+    BEFORE INSERT OR UPDATE 
+    ON public.spellBook
+    FOR EACH ROW
+    EXECUTE FUNCTION public.checkSpellId();
+	
+INSERT INTO spellBook (idMAbility) VALUES (ARRAY[1,2 ,3, 4, 5, 6, 9, 10, 11]);
+
+CREATE PROCEDURE addSpell(i int) as $$
+BEGIN
+	UPDATE spellBook
+	SET idMAbility = idMAbility || i;
+END
+$$ LANGUAGE 'plpgsql';
+
+SELECT * FROM public.spellBook;
+
+CREATE TABLE public.psykers(
+	id int primary key,
+	mana int NOT NULL DEFAULT 0,
+	manaRegen int NOT NULL DEFAULT 0,
+	skillPoint int NOT NULL DEFAULT 0,
+	soulPoint int NOT NULL DEFAULT 0,
+	mindPoint int NOT NULL DEFAULT 0,
+	soulShard int NOT NULL DEFAULT 0,
+	godPowerPoint int NOT NULL DEFAULT 0,
+	curRank int NOT NULL DEFAULT 7,
+	mentalStength int NOT NULL CHECK (mentalStength > 10) DEFAULT 1,
+	mysticism int NOT NULL CHECK (mysticism > 10) DEFAULT 1,
+	mindDurability int NOT NULL CHECK (mindDurability > 10) DEFAULT 1,
+	magicSkill int NOT NULL CHECK (magicSkill > 10) DEFAULT 1,
+	sourcePower int NOT NULL GENERATED ALWAYS AS ((mentalStength + mysticism)/2::int) STORED,
+	magicRank int NOT NULL GENERATED ALWAYS AS ((mindDurability + magicSkill)/2::int) STORED,
+	spellBook int,
+	
+	FOREIGN KEY (curRank) REFERENCES public.ranks(id),
+	FOREIGN KEY (spellBook) REFERENCES public.spellbook(id)
+);
+
+INSERT INTO public.psykers(name, soulPoint, mindPoint, curRank, mentalStength, mysticism, mindDurability, magicSkill, spellBook) VALUES
+
+;
+
+
+select * from psykers;
