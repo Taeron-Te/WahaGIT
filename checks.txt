@@ -1,5 +1,5 @@
 hero checks
-strenghth <= 100 and > 0
+strenghth <= 100 and > 0 
 durabulity <= 20 and > 0
 evasion <= 20 and > 0
 artm <=20 and > 0
@@ -8,6 +8,8 @@ primaryW - contain Weapon with type Primary (1)
 secondW - Weapon with type Secoindary (2)
 meleeW - with type Melee (3)
 throwW - type Throwable (4)
+
+!!Бро, ограничения характеристик на верхний порог, можно сделать только на инсерт? Чтобы баффы могли в теории увеличивать значения более порога.
 
 race
 health > 0
@@ -56,4 +58,5 @@ bonusE <= 5
 bonusA <= 5
 shReducePercent <= 100
 manaRegen >= 0
+
 
