@@ -61,7 +61,7 @@ $$;
 CREATE TABLE public.ammotype (
     id integer NOT NULL,
     name text NOT NULL,
-    value integer
+    value integer NOT NULL
 );
 
 
@@ -71,31 +71,6 @@ CREATE TABLE public.ammotype (
 
 ALTER TABLE public.ammotype ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.ammotype_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
--- Name: armourlevel; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.armourlevel (
-    id integer NOT NULL,
-    name text NOT NULL,
-    value integer
-);
-
-
---
--- Name: armorlevel_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.armourlevel ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.armorlevel_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -159,6 +134,31 @@ ALTER TABLE public."armourAbility" ALTER COLUMN id ADD GENERATED ALWAYS AS IDENT
 
 ALTER TABLE public.armour ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.armour_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: armourlevel; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.armourlevel (
+    id integer NOT NULL,
+    name text NOT NULL,
+    value integer NOT NULL
+);
+
+
+--
+-- Name: armourlevel_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.armourlevel ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.armourlevel_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -237,8 +237,8 @@ CREATE TABLE public.effects (
     id integer NOT NULL,
     name text NOT NULL,
     effduration integer,
-    pimatyeffect text,
-    type integer
+    pimatyeffect text NOT NULL,
+    type integer NOT NULL
 );
 
 
@@ -299,6 +299,60 @@ ALTER TABLE public.hero ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
+-- Name: magicability; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.magicability (
+    id integer NOT NULL,
+    name text NOT NULL,
+    skillpointprice integer NOT NULL,
+    magicschool integer NOT NULL,
+    castprice integer NOT NULL,
+    insecond integer,
+    damage integer NOT NULL,
+    sector integer NOT NULL
+);
+
+
+--
+-- Name: magicability_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.magicability ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.magicability_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: magicschools; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.magicschools (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: magicschools_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.magicschools ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.magicschools_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: moveAbility; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -350,6 +404,30 @@ CREATE TABLE public.race (
 
 ALTER TABLE public.race ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.race_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: ranks; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ranks (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: ranks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.ranks ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.ranks_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -579,14 +657,6 @@ ALTER TABLE public."armourAbility"
 
 
 --
--- Name: armourlevel armorlevel_id_key; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.armourlevel
-    ADD CONSTRAINT armorlevel_id_key UNIQUE (id);
-
-
---
 -- Name: armourAbility armourAbility_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -648,6 +718,14 @@ ALTER TABLE public.armour
 
 ALTER TABLE public.armour
     ADD CONSTRAINT "armourcheckshReducePercent" CHECK (("shReducePercent" <= (100)::double precision)) NOT VALID;
+
+
+--
+-- Name: armourlevel armourlevel_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.armourlevel
+    ADD CONSTRAINT armourlevel_id_key UNIQUE (id);
 
 
 --
@@ -771,6 +849,22 @@ ALTER TABLE public."moveAbility"
 
 
 --
+-- Name: magicability magicability_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.magicability
+    ADD CONSTRAINT magicability_id_key UNIQUE (id);
+
+
+--
+-- Name: magicschools magicschools_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.magicschools
+    ADD CONSTRAINT magicschools_id_key UNIQUE (id);
+
+
+--
 -- Name: moveAbility moveAbility_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -864,6 +958,14 @@ ALTER TABLE public.race
 
 ALTER TABLE ONLY public.race
     ADD CONSTRAINT raceuname UNIQUE (name);
+
+
+--
+-- Name: ranks ranks_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ranks
+    ADD CONSTRAINT ranks_id_key UNIQUE (id);
 
 
 --
@@ -1078,6 +1180,14 @@ ALTER TABLE ONLY public.hero
 
 ALTER TABLE ONLY public."moveAbility"
     ADD CONSTRAINT ma_to_typeofma FOREIGN KEY (type) REFERENCES public."moveAbility"(id) NOT VALID;
+
+
+--
+-- Name: magicability magicability_magicschool_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.magicability
+    ADD CONSTRAINT magicability_magicschool_fkey FOREIGN KEY (magicschool) REFERENCES public.magicschools(id);
 
 
 --
