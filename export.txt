@@ -4,15 +4,15 @@ CREATE TABLE public.typeOfMA(
 );
 
 INSERT INTO public.typeOfMA(name) VALUES
-('walk'),
-('run'),
-('jump'),
-('fly'),
-('jump with jump pack'),
-('phase shift'),
-('warp shift'),
-('teleport'),
-('darkness shift');
+('Walk'),
+('Run'),
+('Jump'),
+('Fly'),
+('Jump with jump pack'),
+('Phase shift'),
+('Warp shift'),
+('Teleport'),
+('Darkness shift');
 
 select * from typeOfMA;
 
