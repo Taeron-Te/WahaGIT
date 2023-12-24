@@ -17,6 +17,94 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: armourracetrigger(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.armourracetrigger() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+	if (select race from armour where id = NEW.armour) != NEW.race
+		then 
+			raise exception 'armour race isn''t compatible with hero race';
+	end if;
+	return NEW;
+end
+$$;
+
+
+--
+-- Name: checkeffectsid(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.checkeffectsid() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+declare
+	i integer;
+begin
+	foreach i in array NEW.effects
+	loop
+		if not exists (select id from effects where id = i)
+			then raise exception 'effect doesn''t exist';
+		end if;
+	end loop;
+	return NEW;
+end
+$$;
+
+
+--
+-- Name: ammotype; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ammotype (
+    id integer NOT NULL,
+    name text NOT NULL,
+    value integer
+);
+
+
+--
+-- Name: ammotype_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.ammotype ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.ammotype_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: armourlevel; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.armourlevel (
+    id integer NOT NULL,
+    name text NOT NULL,
+    value integer
+);
+
+
+--
+-- Name: armorlevel_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.armourlevel ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.armorlevel_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: armour; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -91,7 +179,7 @@ CREATE TABLE public."attackAbility" (
     "maxDist" integer NOT NULL,
     "damageArea" integer,
     "rechargeTime" double precision NOT NULL,
-    "responseDelay" double precision NOT NULL,
+    "responseDelay" double precision,
     "doPointsPrice" integer NOT NULL,
     "defDamage" integer NOT NULL
 );
@@ -142,6 +230,33 @@ ALTER TABLE public.class ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
+-- Name: effects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.effects (
+    id integer NOT NULL,
+    name text NOT NULL,
+    effduration integer,
+    pimatyeffect text,
+    type integer
+);
+
+
+--
+-- Name: effects_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.effects ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.effects_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: hero; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -160,11 +275,11 @@ CREATE TABLE public.hero (
     durability integer NOT NULL,
     evasion integer NOT NULL,
     artm integer NOT NULL,
-    "armourSet" integer NOT NULL,
-    "primaryWeapon" integer NOT NULL,
-    "secondWeapon" integer NOT NULL,
-    "meleeWeapon" integer NOT NULL,
-    "throwWeapon" integer NOT NULL,
+    "armourSet" integer,
+    "primaryWeapon" integer,
+    "secondWeapon" integer,
+    "meleeWeapon" integer,
+    "throwWeapon" integer,
     effects integer[] NOT NULL
 );
 
@@ -235,6 +350,102 @@ CREATE TABLE public.race (
 
 ALTER TABLE public.race ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.race_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: typeofaa; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.typeofaa (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: typeofaa_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.typeofaa ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.typeofaa_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: typeofeffect; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.typeofeffect (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: typeofeffect_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.typeofeffect ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.typeofeffect_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: typeofma; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.typeofma (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: typeofma_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.typeofma ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.typeofma_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: typeofw; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.typeofw (
+    id integer NOT NULL,
+    name text NOT NULL
+);
+
+
+--
+-- Name: typeofw_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.typeofw ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.typeofw_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -336,6 +547,14 @@ ALTER TABLE ONLY public."attackAbility"
 
 
 --
+-- Name: ammotype ammotype_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ammotype
+    ADD CONSTRAINT ammotype_id_key UNIQUE (id);
+
+
+--
 -- Name: armourAbility arauname; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -357,6 +576,14 @@ ALTER TABLE public."armourAbility"
 
 ALTER TABLE public."armourAbility"
     ADD CONSTRAINT armacheckrange CHECK ((range > (0)::double precision)) NOT VALID;
+
+
+--
+-- Name: armourlevel armorlevel_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.armourlevel
+    ADD CONSTRAINT armorlevel_id_key UNIQUE (id);
 
 
 --
@@ -469,6 +696,14 @@ ALTER TABLE public.class
 
 ALTER TABLE ONLY public.class
     ADD CONSTRAINT classuname UNIQUE (name);
+
+
+--
+-- Name: effects effects_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.effects
+    ADD CONSTRAINT effects_id_key UNIQUE (id);
 
 
 --
@@ -632,6 +867,38 @@ ALTER TABLE ONLY public.race
 
 
 --
+-- Name: typeofaa typeofaa_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.typeofaa
+    ADD CONSTRAINT typeofaa_id_key UNIQUE (id);
+
+
+--
+-- Name: typeofeffect typeofeffect_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.typeofeffect
+    ADD CONSTRAINT typeofeffect_id_key UNIQUE (id);
+
+
+--
+-- Name: typeofma typeofma_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.typeofma
+    ADD CONSTRAINT typeofma_id_key UNIQUE (id);
+
+
+--
+-- Name: typeofw typeofw_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.typeofw
+    ADD CONSTRAINT typeofw_id_key UNIQUE (id);
+
+
+--
 -- Name: weapon weapon_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -680,11 +947,41 @@ ALTER TABLE ONLY public.weapon
 
 
 --
+-- Name: hero checkarmourrace; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER checkarmourrace BEFORE INSERT OR UPDATE ON public.hero FOR EACH ROW EXECUTE FUNCTION public.armourracetrigger();
+
+
+--
+-- Name: hero effectchecker; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER effectchecker BEFORE INSERT OR UPDATE ON public.hero FOR EACH ROW EXECUTE FUNCTION public.checkeffectsid();
+
+
+--
+-- Name: armourAbility aa_to_typeofaa; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."armourAbility"
+    ADD CONSTRAINT aa_to_typeofaa FOREIGN KEY (type) REFERENCES public.typeofaa(id) NOT VALID;
+
+
+--
 -- Name: armour armour_to_aa; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.armour
     ADD CONSTRAINT armour_to_aa FOREIGN KEY ("armourAbility") REFERENCES public."armourAbility"(id);
+
+
+--
+-- Name: armour armour_to_armourlevel; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.armour
+    ADD CONSTRAINT armour_to_armourlevel FOREIGN KEY ("apdLevel") REFERENCES public.armourlevel(id) NOT VALID;
 
 
 --
@@ -709,6 +1006,14 @@ ALTER TABLE ONLY public.class
 
 ALTER TABLE ONLY public.class
     ADD CONSTRAINT class_to_ma FOREIGN KEY ("uniqueMove") REFERENCES public."moveAbility"(id);
+
+
+--
+-- Name: effects effects_type_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.effects
+    ADD CONSTRAINT effects_type_fkey FOREIGN KEY (type) REFERENCES public.typeofeffect(id);
 
 
 --
@@ -768,6 +1073,14 @@ ALTER TABLE ONLY public.hero
 
 
 --
+-- Name: moveAbility ma_to_typeofma; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public."moveAbility"
+    ADD CONSTRAINT ma_to_typeofma FOREIGN KEY (type) REFERENCES public."moveAbility"(id) NOT VALID;
+
+
+--
 -- Name: weapon weapon_to_aa1; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -805,6 +1118,22 @@ ALTER TABLE ONLY public.weapon
 
 ALTER TABLE ONLY public.weapon
     ADD CONSTRAINT weapon_to_aa5 FOREIGN KEY ("fivtyA") REFERENCES public."attackAbility"(id);
+
+
+--
+-- Name: weapon weapon_to_ammotype; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.weapon
+    ADD CONSTRAINT weapon_to_ammotype FOREIGN KEY ("ammoType") REFERENCES public.ammotype(id) NOT VALID;
+
+
+--
+-- Name: weapon weapon_to_typeofw; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.weapon
+    ADD CONSTRAINT weapon_to_typeofw FOREIGN KEY (type) REFERENCES public.typeofw(id) NOT VALID;
 
 
 --
