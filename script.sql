@@ -24,7 +24,7 @@ CREATE FUNCTION public.armourracetrigger() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 begin
-	if (select race from armour where id = NEW.armour) != NEW.race
+	if (select race from armour where id = NEW."armourSet") != NEW.race
 		then 
 			raise exception 'armour race isn''t compatible with hero race';
 	end if;
@@ -43,13 +43,44 @@ CREATE FUNCTION public.checkeffectsid() RETURNS trigger
 declare
 	i integer;
 begin
+	if NEW.effects is not null then
 	foreach i in array NEW.effects
 	loop
 		if not exists (select id from effects where id = i)
 			then raise exception 'effect doesn''t exist';
 		end if;
 	end loop;
+	end if;
 	return NEW;
+end
+$$;
+
+
+--
+-- Name: checkweapons(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.checkweapons() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+	if NEW."primaryWeapon" is not null and (select type from weapon where id = NEW."primaryWeapon") != 1
+		then raise exception 'primary weapon has uncompatible type';
+	end if;
+	
+	if NEW."secondWeapon" is not null and (select type from weapon where id = NEW."secondWeapon") != 2
+		then raise exception 'second weapon has uncompatible type';
+	end if;
+	
+	if NEW."meleeWeapon" is not null and (select type from weapon where id = NEW."meleeWeapon") != 3
+		then raise exception 'melee weapon has uncompatible type';
+	end if;
+	
+	if NEW."throwWeapon" is not null and (select type from weapon where id = NEW."throwWeapon") != 4
+		then raise exception 'throw weapon has uncompatible type';
+	end if;
+	
+	return new;
 end
 $$;
 
@@ -206,7 +237,7 @@ ALTER TABLE public."attackAbility" ALTER COLUMN id ADD GENERATED ALWAYS AS IDENT
 CREATE TABLE public.class (
     id integer NOT NULL,
     name text NOT NULL,
-    "walkRange" integer NOT NULL,
+    "walkRange" integer DEFAULT 1 NOT NULL,
     "bonusHealth" integer NOT NULL,
     "uniqueMove" integer NOT NULL,
     "classMeleeAttackAbility" integer,
@@ -268,13 +299,13 @@ CREATE TABLE public.hero (
     age integer,
     race integer NOT NULL,
     class integer NOT NULL,
-    "healthCur" integer NOT NULL,
-    "armourCur" integer NOT NULL,
-    "shieldCur" integer NOT NULL,
-    strength integer NOT NULL,
-    durability integer NOT NULL,
-    evasion integer NOT NULL,
-    artm integer NOT NULL,
+    "healthCur" integer DEFAULT 0 NOT NULL,
+    "armourCur" integer DEFAULT 0 NOT NULL,
+    "shieldCur" integer DEFAULT 0 NOT NULL,
+    strength integer DEFAULT 1 NOT NULL,
+    durability integer DEFAULT 1 NOT NULL,
+    evasion integer DEFAULT 1 NOT NULL,
+    artm integer DEFAULT 1 NOT NULL,
     "armourSet" integer,
     "primaryWeapon" integer,
     "secondWeapon" integer,
@@ -386,7 +417,7 @@ ALTER TABLE public."moveAbility" ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTIT
 CREATE TABLE public.race (
     id integer NOT NULL,
     name text NOT NULL,
-    "walkRange" integer NOT NULL,
+    "walkRange" integer DEFAULT 1 NOT NULL,
     health integer NOT NULL,
     "bonusManaMin" integer,
     "bonusManaMax" integer,
@@ -1033,6 +1064,14 @@ ALTER TABLE public.weapon
 
 
 --
+-- Name: weapon weaponcheckmindamage; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.weapon
+    ADD CONSTRAINT weaponcheckmindamage CHECK (((type <> 3) OR ("minDamage" IS NULL))) NOT VALID;
+
+
+--
 -- Name: weapon weapondamagecheck; Type: CHECK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1060,6 +1099,13 @@ CREATE TRIGGER checkarmourrace BEFORE INSERT OR UPDATE ON public.hero FOR EACH R
 --
 
 CREATE TRIGGER effectchecker BEFORE INSERT OR UPDATE ON public.hero FOR EACH ROW EXECUTE FUNCTION public.checkeffectsid();
+
+
+--
+-- Name: hero heroweapons; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER heroweapons BEFORE INSERT OR UPDATE ON public.hero FOR EACH ROW EXECUTE FUNCTION public.checkweapons();
 
 
 --
