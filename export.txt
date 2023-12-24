@@ -1,5 +1,5 @@
 CREATE TABLE public.typeOfMA(
-	id int GENERATED ALWAYS AS IDENTITY,
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL
 );
 
@@ -17,7 +17,7 @@ INSERT INTO public.typeOfMA(name) VALUES
 select * from typeOfMA;
 
 CREATE TABLE public.typeOfW(
-	id int GENERATED ALWAYS AS IDENTITY,
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL
 );
 
@@ -31,7 +31,7 @@ INSERT INTO public.typeOfW(name) VALUES
 select * from typeOfW;
 
 CREATE TABLE public.typeOfAA(
-	id int GENERATED ALWAYS AS IDENTITY,
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL
 );
 
@@ -45,7 +45,7 @@ INSERT INTO public.typeOfAA(name) VALUES
 select * from typeOfAA;
 
 CREATE TABLE public.armorLevel(
-	id int GENERATED ALWAYS AS IDENTITY,
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL,
 	value int
 );
@@ -55,7 +55,7 @@ INSERT INTO public.armorLevel(name, value) VALUES
 ('Shotgun Buckshot', 12),
 ('Shotgun Slug', 15),
 ('Blade', 15),
-('Lasgun low-power', 15)
+('Lasgun low-power', 15),
 ('High-Power Autogun', 20),
 ('Lasgun normal-power', 25),
 ('Lasgun high-power', 30),
@@ -84,18 +84,18 @@ INSERT INTO public.armorLevel(name, value) VALUES
 
 select * from armorLevel;
 
-CREATE TABLE public.armorLevel(
-	id int GENERATED ALWAYS AS IDENTITY,
+CREATE TABLE public.ammoType(
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL,
 	value int
 );
 
-INSERT INTO public.armorLevel(name, value) VALUES
+INSERT INTO public.ammoType(name, value) VALUES
 ('Low Caliber Autogun', 10),
 ('Shotgun Buckshot', 12),
 ('Shotgun Slug', 15),
 ('Blade', 15),
-('Lasgun low-power', 15)
+('Lasgun low-power', 15),
 ('High-Power Autogun', 20),
 ('Lasgun normal-power', 25),
 ('Lasgun high-power', 30),
@@ -122,10 +122,10 @@ INSERT INTO public.armorLevel(name, value) VALUES
 ;
 
 
-select * from armorLevel;
+select * from ammoType;
 
 CREATE TABLE public.typeOfEffect(
-	id int GENERATED ALWAYS AS IDENTITY,
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL
 	
 );
@@ -140,7 +140,7 @@ INSERT INTO public.typeOfEffect(name) VALUES
 select * from typeOfEffect;
 
 CREATE TABLE public.effects(
-	id int GENERATED ALWAYS AS IDENTITY,
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL,
 	effDuration int,
 	pimatyEffect text,
