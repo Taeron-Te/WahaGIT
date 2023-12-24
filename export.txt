@@ -44,13 +44,13 @@ INSERT INTO public.typeOfAA(name) VALUES
 
 select * from typeOfAA;
 
-CREATE TABLE public.armorLevel(
+CREATE TABLE public.armourLevel(
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL,
-	value int
+	value int NOT NULL
 );
 
-INSERT INTO public.armorLevel(name, value) VALUES
+INSERT INTO public.armourLevel(name, value) VALUES
 ('Low Caliber Autogun', 10),
 ('Shotgun Buckshot', 12),
 ('Shotgun Slug', 15),
@@ -82,12 +82,12 @@ INSERT INTO public.armorLevel(name, value) VALUES
 ;
 
 
-select * from armorLevel;
+select * from armourLevel;
 
 CREATE TABLE public.ammoType(
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL,
-	value int
+	value int NOT NULL
 );
 
 INSERT INTO public.ammoType(name, value) VALUES
@@ -143,8 +143,8 @@ CREATE TABLE public.effects(
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL,
 	effDuration int,
-	pimatyEffect text,
-	type int,
+	pimatyEffect text NOT NULL,
+	type int NOT NULL,
 	FOREIGN KEY (type) REFERENCES public.typeOfEffect(id)
 );
 
@@ -164,3 +164,83 @@ INSERT INTO public.effects(name, effDuration, pimatyEffect, type) VALUES
 
 select * from effects;
 
+/* Independent part */
+
+CREATE TABLE public.ranks(
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
+	name text NOT NULL
+);
+
+INSERT INTO public.ranks(name) VALUES
+('Alpha'),
+('Beta'),
+('Gamma'),
+('Delta'),
+('Epsilon'),
+('Zeta'),
+('Etta')
+;
+
+select * from ranks;
+
+CREATE TABLE public.magicSchools(
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
+	name text NOT NULL
+);
+
+INSERT INTO public.magicSchools(name) VALUES
+('Pyromancy'),
+('Telekinetics'),
+('Biomancy'),
+('Telepathy'),
+('Geokinesis'),
+('Cryokinesis'),
+('Fulmination'),
+('Human divination'),
+('Demonology Sanctum'),
+('Demonology Maleficent'),
+('Theosophy'),
+('Thaumaturgy'),
+('Technomancy'),
+('Feats of Faith')
+;
+
+select * from magicSchools;
+
+CREATE TABLE public.magicAbility(
+	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
+	name text NOT NULL,
+	skillPointPrice int NOT NULL,
+	magicSchool int NOT NULL,
+	castPrice int NOT NULL,
+	inSecond int,
+    damage int NOT NULL,
+	sector int NOT NULL,
+	FOREIGN KEY (magicSchool) REFERENCES public.magicschools(id)
+);
+
+INSERT INTO public.magicAbility(name, skillPointPrice,  magicSchool, castPrice, inSecond, damage, sector) VALUES
+('Clap', 0, 1, 15, NULL, 40, 2),
+('Fire ball', 1, 1, 40, NULL, 120, 1),
+('Fire flow', 2, 1, 15, 1, 45, 0),
+('Fire wall', 3, 1, 150, 5, 45, 2),
+('Kinetic impact', 1, 2, 40, NULL, 200, 0),
+('Moving', 2, 2, 5, 1, 0, 0),
+('Kinetic hammer', 2, 2, 40, 1, 250, 0),
+('Kinetic hammer pulse', 2, 2, 100, NULL, 500, 0),
+('Kinetic shield', 2, 2, 90, 5, 0, 0),
+('Blood stop', 0, 3, 2, 1, 0, 0),
+('Basic regeneration', 1, 3, 5, 1, 0, 0),
+('Regeneration', 2, 3, 15, 1, 0, 0),
+('Speed regeneration', 3, 3, 450, NULL, 0, 0),
+('Psi manipulation', 0, 4, 50, NULL, 0, 0),
+('Dreamwalking', 1, 4, 40, NULL, 0, 0),
+('Telepathy', 1, 4, 15, NULL, 0, 0),
+('Mind hacking', 3, 4, 140, 3, 0, 0),
+('Earth shakes', 1, 5, 290, NULL, 50, 20),
+('Underground punch', 2, 5, 80, NULL, 200, 0),
+('Destroy', 3, 5, 340, 4, 0, 5),
+('Earh brige', 2, 5, 100, NULL, 0, 0)
+;
+
+select * from magicAbility;
