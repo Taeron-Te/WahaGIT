@@ -191,11 +191,11 @@ $$;
 -- Name: ispsyker(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.ispsyker(id integer) RETURNS boolean
+CREATE FUNCTION public.ispsyker(heroid integer) RETURNS boolean
     LANGUAGE plpgsql
     AS $$
 begin
-	return exists (select * from psyker where id = id);
+	return exists (select * from psykers where id = heroid);
 end
 $$;
 
@@ -657,6 +657,16 @@ CREATE TABLE public.psykers (
     CONSTRAINT psykers_minddurability_check CHECK ((minddurability > 10)),
     CONSTRAINT psykers_mysticism_check CHECK ((mysticism > 10))
 );
+
+
+--
+-- Name: psykerscount; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.psykerscount AS
+SELECT
+    NULL::text AS name,
+    NULL::bigint AS psykers;
 
 
 --
@@ -1440,6 +1450,22 @@ CREATE OR REPLACE VIEW public.racestat AS
             ELSE ((count(*))::double precision / (count(*) OVER ())::double precision)
         END AS countperc
    FROM (public.hero
+     RIGHT JOIN public.race ON ((hero.race = race.id)))
+  GROUP BY race.id;
+
+
+--
+-- Name: psykerscount _RETURN; Type: RULE; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE VIEW public.psykerscount AS
+ SELECT race.name,
+        CASE
+            WHEN (max(hero.id) IS NULL) THEN (0)::bigint
+            ELSE count(*)
+        END AS psykers
+   FROM ((public.hero
+     JOIN public.psykers ON ((psykers.id = hero.id)))
      RIGHT JOIN public.race ON ((hero.race = race.id)))
   GROUP BY race.id;
 
