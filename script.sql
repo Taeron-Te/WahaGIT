@@ -188,6 +188,39 @@ $$;
 
 
 --
+-- Name: heroview(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.heroview(heroid integer) RETURNS TABLE(property text, value text)
+    LANGUAGE plpgsql
+    AS $$
+declare
+	w1 integer;
+	w2 integer;
+	w3 integer;
+	w4 integer;
+begin
+	w1 = (select "primaryWeapon" from hero where id = heroid);
+	w2 = (select "secondWeapon" from hero where id = heroid);
+	w3 = (select "meleeWeapon" from hero where id = heroid);
+	w4 = (select "throwWeapon" from hero where id = heroid);
+	
+	return query (select 'hero name' as property, name as value
+	from hero where id = heroid
+	union
+	select 'primary weapon', name from weapon where id = w1
+	union
+	select 'second weapon', name from weapon where id = w2
+	union
+	select 'melee weapon', name from weapon where id = w3
+	union
+	select 'throw weapon', name from weapon where id = w4
+	);
+end
+$$;
+
+
+--
 -- Name: ispsyker(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
