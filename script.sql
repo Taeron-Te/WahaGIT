@@ -348,6 +348,16 @@ ALTER TABLE public.class ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
+-- Name: classstat; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.classstat AS
+SELECT
+    NULL::text AS name,
+    NULL::double precision AS countperc;
+
+
+--
 -- Name: effects; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -414,6 +424,63 @@ ALTER TABLE public.hero ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: race; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.race (
+    id integer NOT NULL,
+    name text NOT NULL,
+    "walkRange" integer DEFAULT 1 NOT NULL,
+    health integer NOT NULL,
+    "bonusManaMin" integer,
+    "bonusManaMax" integer,
+    "bonusS" integer,
+    "bonusD" integer,
+    "bonusE" integer,
+    "bonusA" integer,
+    "doPoints" integer NOT NULL
+);
+
+
+--
+-- Name: herostat; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.herostat AS
+ SELECT 'avg strength'::text AS property,
+    (avg(hero.strength))::text AS value
+   FROM public.hero
+UNION
+ SELECT 'avg durability'::text AS property,
+    (avg(hero.durability))::text AS value
+   FROM public.hero
+UNION
+ SELECT 'avg evasion'::text AS property,
+    (avg(hero.evasion))::text AS value
+   FROM public.hero
+UNION
+ SELECT 'avg artm'::text AS property,
+    (avg(hero.artm))::text AS value
+   FROM public.hero
+UNION
+ SELECT 'avg artm'::text AS property,
+    (avg(hero.artm))::text AS value
+   FROM public.hero
+UNION
+ SELECT 'favorite class'::text AS property,
+    ( SELECT class.name
+           FROM public.class
+          WHERE (class.id = mode() WITHIN GROUP (ORDER BY hero.class))) AS value
+   FROM public.hero
+UNION
+ SELECT 'favorite race'::text AS property,
+    ( SELECT race.name
+           FROM public.race
+          WHERE (race.id = mode() WITHIN GROUP (ORDER BY hero.race))) AS value
+   FROM public.hero;
 
 
 --
@@ -526,25 +593,6 @@ CREATE TABLE public.psykers (
 
 
 --
--- Name: race; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.race (
-    id integer NOT NULL,
-    name text NOT NULL,
-    "walkRange" integer DEFAULT 1 NOT NULL,
-    health integer NOT NULL,
-    "bonusManaMin" integer,
-    "bonusManaMax" integer,
-    "bonusS" integer,
-    "bonusD" integer,
-    "bonusE" integer,
-    "bonusA" integer,
-    "doPoints" integer NOT NULL
-);
-
-
---
 -- Name: race_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -556,6 +604,16 @@ ALTER TABLE public.race ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: racestat; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.racestat AS
+SELECT
+    NULL::text AS name,
+    NULL::double precision AS countperc;
 
 
 --
@@ -1241,6 +1299,30 @@ ALTER TABLE public.weapon
 
 ALTER TABLE ONLY public.weapon
     ADD CONSTRAINT weaponuname UNIQUE (name);
+
+
+--
+-- Name: racestat _RETURN; Type: RULE; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE VIEW public.racestat AS
+ SELECT race.name,
+    ((count(*))::double precision / (count(*) OVER ())::double precision) AS countperc
+   FROM (public.hero
+     JOIN public.race ON ((hero.race = race.id)))
+  GROUP BY race.id;
+
+
+--
+-- Name: classstat _RETURN; Type: RULE; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE VIEW public.classstat AS
+ SELECT class.name,
+    ((count(*))::double precision / (count(*) OVER ())::double precision) AS countperc
+   FROM (public.hero
+     JOIN public.class ON ((hero.class = class.id)))
+  GROUP BY class.id;
 
 
 --
