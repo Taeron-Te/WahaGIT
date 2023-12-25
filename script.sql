@@ -17,6 +17,16 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: appliedEffect; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public."appliedEffect" AS (
+	effect integer,
+	durability integer
+);
+
+
+--
 -- Name: addspell(integer); Type: PROCEDURE; Schema: public; Owner: -
 --
 
@@ -27,6 +37,20 @@ BEGIN
 	UPDATE spellBook
 	SET idMAbility = idMAbility || i;
 END
+$$;
+
+
+--
+-- Name: applyeffect(integer, integer); Type: PROCEDURE; Schema: public; Owner: -
+--
+
+CREATE PROCEDURE public.applyeffect(IN id integer, IN durability integer)
+    LANGUAGE plpgsql
+    AS $$
+begin
+	update hero
+	set effects = effects || (id, durability);
+end
 $$;
 
 
@@ -60,7 +84,7 @@ begin
 	if NEW.effects is not null then
 	foreach i in array NEW.effects
 	loop
-		if not exists (select id from effects where id = i)
+		if not exists (select id from effects where id = i.effect)
 			then raise exception 'effect doesn''t exist';
 		end if;
 	end loop;
@@ -354,6 +378,7 @@ ALTER TABLE public.class ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 CREATE VIEW public.classstat AS
 SELECT
     NULL::text AS name,
+    NULL::bigint AS count,
     NULL::double precision AS countperc;
 
 
@@ -408,7 +433,8 @@ CREATE TABLE public.hero (
     "secondWeapon" integer,
     "meleeWeapon" integer,
     "throwWeapon" integer,
-    effects integer[] NOT NULL
+    lead integer,
+    effects public."appliedEffect"[] NOT NULL
 );
 
 
@@ -613,6 +639,7 @@ ALTER TABLE public.race ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 CREATE VIEW public.racestat AS
 SELECT
     NULL::text AS name,
+    NULL::bigint AS count,
     NULL::double precision AS countperc;
 
 
@@ -663,6 +690,38 @@ ALTER TABLE public.spellbook ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: squads; Type: VIEW; Schema: public; Owner: -
+--
+
+CREATE VIEW public.squads AS
+ WITH RECURSIVE r AS (
+         SELECT hero.id,
+            (hero.name || '*'::text) AS name,
+            hero.lead,
+            0 AS level,
+            (hero.id || ''::text) AS path
+           FROM public.hero
+          WHERE (hero.lead IS NULL)
+        UNION
+         SELECT hero.id,
+            hero.name,
+            hero.lead,
+            (r_1.level + 1) AS level,
+            ((r_1.path || '|'::text) || hero.id) AS path
+           FROM (r r_1
+             JOIN public.hero ON ((r_1.id = hero.lead)))
+        )
+ SELECT ((repeat('-'::text, (level * 3)) ||
+        CASE
+            WHEN (level > 0) THEN '>'::text
+            ELSE ''::text
+        END) || id) AS id,
+    name
+   FROM r
+  ORDER BY path;
 
 
 --
@@ -1302,27 +1361,46 @@ ALTER TABLE ONLY public.weapon
 
 
 --
--- Name: racestat _RETURN; Type: RULE; Schema: public; Owner: -
---
-
-CREATE OR REPLACE VIEW public.racestat AS
- SELECT race.name,
-    ((count(*))::double precision / (count(*) OVER ())::double precision) AS countperc
-   FROM (public.hero
-     JOIN public.race ON ((hero.race = race.id)))
-  GROUP BY race.id;
-
-
---
 -- Name: classstat _RETURN; Type: RULE; Schema: public; Owner: -
 --
 
 CREATE OR REPLACE VIEW public.classstat AS
  SELECT class.name,
-    ((count(*))::double precision / (count(*) OVER ())::double precision) AS countperc
+        CASE
+            WHEN (max(hero.id) IS NULL) THEN (0)::bigint
+            ELSE count(*)
+        END AS count,
+        CASE
+            WHEN (max(hero.id) IS NULL) THEN (0)::double precision
+            ELSE ((count(*))::double precision / (count(*) OVER ())::double precision)
+        END AS countperc
    FROM (public.hero
-     JOIN public.class ON ((hero.class = class.id)))
-  GROUP BY class.id;
+     RIGHT JOIN public.class ON ((hero.class = class.id)))
+  GROUP BY class.id
+  ORDER BY
+        CASE
+            WHEN (max(hero.id) IS NULL) THEN (0)::double precision
+            ELSE ((count(*))::double precision / (count(*) OVER ())::double precision)
+        END;
+
+
+--
+-- Name: racestat _RETURN; Type: RULE; Schema: public; Owner: -
+--
+
+CREATE OR REPLACE VIEW public.racestat AS
+ SELECT race.name,
+        CASE
+            WHEN (max(hero.id) IS NULL) THEN (0)::bigint
+            ELSE count(*)
+        END AS count,
+        CASE
+            WHEN (max(hero.id) IS NULL) THEN (0)::double precision
+            ELSE ((count(*))::double precision / (count(*) OVER ())::double precision)
+        END AS countperc
+   FROM (public.hero
+     RIGHT JOIN public.race ON ((hero.race = race.id)))
+  GROUP BY race.id;
 
 
 --
@@ -1423,6 +1501,14 @@ ALTER TABLE ONLY public.hero
 
 ALTER TABLE ONLY public.hero
     ADD CONSTRAINT hero_to_class FOREIGN KEY (class) REFERENCES public.class(id);
+
+
+--
+-- Name: hero hero_to_hero; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.hero
+    ADD CONSTRAINT hero_to_hero FOREIGN KEY (lead) REFERENCES public.hero(id) NOT VALID;
 
 
 --
