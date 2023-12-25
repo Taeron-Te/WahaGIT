@@ -44,12 +44,13 @@ $$;
 -- Name: applyeffect(integer, integer); Type: PROCEDURE; Schema: public; Owner: -
 --
 
-CREATE PROCEDURE public.applyeffect(IN id integer, IN durability integer)
+CREATE PROCEDURE public.applyeffect(IN heroid integer, IN effect integer)
     LANGUAGE plpgsql
     AS $$
 begin
 	update hero
-	set effects = effects || (id, durability);
+	set effects = array_append(effects, (effect, (select effduration from effects where effects.id = effect))::public."appliedEffect")
+	where id = heroid;
 end
 $$;
 
@@ -79,7 +80,7 @@ CREATE FUNCTION public.checkeffectsid() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 declare
-	i integer;
+	i public."appliedEffect";
 begin
 	if NEW.effects is not null then
 	foreach i in array NEW.effects
@@ -193,6 +194,30 @@ CREATE FUNCTION public.mana(mentalstength integer, currank integer) RETURNS inte
 BEGIN 
 	RETURN (mentalStength * (SELECT powerratio FROM public.ranks WHERE id = curRank))::int;
 END
+$$;
+
+
+--
+-- Name: tickeffects(integer); Type: PROCEDURE; Schema: public; Owner: -
+--
+
+CREATE PROCEDURE public.tickeffects(IN heroid integer)
+    LANGUAGE plpgsql
+    AS $$
+declare
+	i public."appliedEffect";
+	buf public."appliedEffect"[];
+begin
+	foreach i in array(select effects from hero where id = heroid)
+	loop
+		if i.durability - 1 > 0
+			then
+				i.durability = i.durability - 1;
+				buf = array_append(buf, i);
+		end if;
+	end loop;
+	update hero set effects = buf where id = heroid;
+end
 $$;
 
 
