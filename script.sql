@@ -17,6 +17,20 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
+-- Name: addspell(integer); Type: PROCEDURE; Schema: public; Owner: -
+--
+
+CREATE PROCEDURE public.addspell(IN i integer)
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	UPDATE spellBook
+	SET idMAbility = idMAbility || i;
+END
+$$;
+
+
+--
 -- Name: armourracetrigger(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -57,6 +71,29 @@ $$;
 
 
 --
+-- Name: checkspellid(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.checkspellid() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+declare
+  i integer;
+begin
+  if NEW.idMAbility is not null then
+  foreach i in array NEW.idMAbility
+  loop
+    if not exists (select id from public.magicability where id = i)
+      then raise exception 'spell doesn''t exist';
+    end if;
+  end loop;
+  end if;
+  return NEW;
+end
+$$;
+
+
+--
 -- Name: checkweapons(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -64,24 +101,74 @@ CREATE FUNCTION public.checkweapons() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 begin
-	if NEW."primaryWeapon" is not null and (select type from weapon where id = NEW."primaryWeapon") != 1
-		then raise exception 'primary weapon has uncompatible type';
+	if NEW."primaryWeapon" is not null then
+		if (select type from weapon where id = NEW."primaryWeapon") != 1
+			then raise exception 'primary weapon has uncompatible type';
+		end if;
+		
+		if (select "manaRegen">0 from weapon where id = NEW."primaryWeapon") and not ispsyker(NEW."id")
+			then raise exception 'primary weapon is only available to psykers';
+		end if;
 	end if;
 	
-	if NEW."secondWeapon" is not null and (select type from weapon where id = NEW."secondWeapon") != 2
-		then raise exception 'second weapon has uncompatible type';
+	if NEW."secondWeapon" is not null then
+		if (select type from weapon where id = NEW."secondWeapon") != 2
+			then raise exception 'second weapon has uncompatible type';
+		end if;
+		
+		if (select "manaRegen">0 from weapon where id = NEW."secondWeapon") and not ispsyker(NEW."id")
+			then raise exception 'second weapon is only available to psykers';
+		end if;
 	end if;
 	
-	if NEW."meleeWeapon" is not null and (select type from weapon where id = NEW."meleeWeapon") != 3
-		then raise exception 'melee weapon has uncompatible type';
+	if NEW."meleeWeapon" is not null then
+		if (select type from weapon where id = NEW."meleeWeapon") != 3
+			then raise exception 'melee weapon has uncompatible type';
+		end if;
+		
+		if (select "manaRegen">0 from weapon where id = NEW."meleeWeapon") and not ispsyker(NEW."id")
+			then raise exception 'melee weapon is only available to psykers';
+		end if;
 	end if;
 	
-	if NEW."throwWeapon" is not null and (select type from weapon where id = NEW."throwWeapon") != 4
-		then raise exception 'throw weapon has uncompatible type';
+	if NEW."throwWeapon" is not null then
+		if (select type from weapon where id = NEW."throwWeapon") != 4
+			then raise exception 'throw weapon has uncompatible type';
+		end if;
+		
+		if (select "manaRegen">0 from weapon where id = NEW."throwWeapon") and not ispsyker(NEW."id")
+			then raise exception 'throw weapon is only available to psykers';
+		end if;
 	end if;
 	
 	return new;
 end
+$$;
+
+
+--
+-- Name: ispsyker(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.ispsyker(id integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+begin
+	return exists (select * from psyker where id = id);
+end
+$$;
+
+
+--
+-- Name: mana(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.mana(mentalstength integer, currank integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+BEGIN 
+	RETURN (mentalStength * (SELECT powerratio FROM public.ranks WHERE id = curRank))::int;
+END
 $$;
 
 
@@ -411,6 +498,34 @@ ALTER TABLE public."moveAbility" ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTIT
 
 
 --
+-- Name: psykers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.psykers (
+    id integer NOT NULL,
+    mana integer DEFAULT 0 NOT NULL,
+    manaregen integer DEFAULT 0 NOT NULL,
+    skillpoint integer DEFAULT 0 NOT NULL,
+    soulpoint integer DEFAULT 0 NOT NULL,
+    mindpoint integer DEFAULT 0 NOT NULL,
+    soulshard integer DEFAULT 0 NOT NULL,
+    godpowerpoint integer DEFAULT 0 NOT NULL,
+    currank integer DEFAULT 7 NOT NULL,
+    mentalstength integer DEFAULT 1 NOT NULL,
+    mysticism integer DEFAULT 1 NOT NULL,
+    minddurability integer DEFAULT 1 NOT NULL,
+    magicskill integer DEFAULT 1 NOT NULL,
+    sourcepower integer GENERATED ALWAYS AS (((mentalstength + mysticism) / 2)) STORED NOT NULL,
+    magicrank integer GENERATED ALWAYS AS (((minddurability + magicskill) / 2)) STORED NOT NULL,
+    spellbook integer,
+    CONSTRAINT psykers_magicskill_check CHECK ((magicskill > 10)),
+    CONSTRAINT psykers_mentalstength_check CHECK ((mentalstength > 10)),
+    CONSTRAINT psykers_minddurability_check CHECK ((minddurability > 10)),
+    CONSTRAINT psykers_mysticism_check CHECK ((mysticism > 10))
+);
+
+
+--
 -- Name: race; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -449,7 +564,8 @@ ALTER TABLE public.race ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 CREATE TABLE public.ranks (
     id integer NOT NULL,
-    name text NOT NULL
+    name text NOT NULL,
+    powerratio double precision NOT NULL
 );
 
 
@@ -459,6 +575,30 @@ CREATE TABLE public.ranks (
 
 ALTER TABLE public.ranks ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     SEQUENCE NAME public.ranks_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: spellbook; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.spellbook (
+    id integer NOT NULL,
+    idmability integer[]
+);
+
+
+--
+-- Name: spellbook_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.spellbook ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.spellbook_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -912,6 +1052,14 @@ ALTER TABLE ONLY public."moveAbility"
 
 
 --
+-- Name: psykers psykers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.psykers
+    ADD CONSTRAINT psykers_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: race race_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -997,6 +1145,14 @@ ALTER TABLE ONLY public.race
 
 ALTER TABLE ONLY public.ranks
     ADD CONSTRAINT ranks_id_key UNIQUE (id);
+
+
+--
+-- Name: spellbook spellbook_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.spellbook
+    ADD CONSTRAINT spellbook_id_key UNIQUE (id);
 
 
 --
@@ -1106,6 +1262,13 @@ CREATE TRIGGER effectchecker BEFORE INSERT OR UPDATE ON public.hero FOR EACH ROW
 --
 
 CREATE TRIGGER heroweapons BEFORE INSERT OR UPDATE ON public.hero FOR EACH ROW EXECUTE FUNCTION public.checkweapons();
+
+
+--
+-- Name: spellbook spellbookchecker; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER spellbookchecker BEFORE INSERT OR UPDATE ON public.spellbook FOR EACH ROW EXECUTE FUNCTION public.checkspellid();
 
 
 --
@@ -1234,6 +1397,22 @@ ALTER TABLE ONLY public."moveAbility"
 
 ALTER TABLE ONLY public.magicability
     ADD CONSTRAINT magicability_magicschool_fkey FOREIGN KEY (magicschool) REFERENCES public.magicschools(id);
+
+
+--
+-- Name: psykers psykers_currank_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.psykers
+    ADD CONSTRAINT psykers_currank_fkey FOREIGN KEY (currank) REFERENCES public.ranks(id);
+
+
+--
+-- Name: psykers psykers_spellbook_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.psykers
+    ADD CONSTRAINT psykers_spellbook_fkey FOREIGN KEY (spellbook) REFERENCES public.spellbook(id);
 
 
 --
