@@ -47,9 +47,25 @@ $$;
 CREATE PROCEDURE public.applyeffect(IN heroid integer, IN effect integer)
     LANGUAGE plpgsql
     AS $$
+declare
+	dur int;
+begin
+	select effduration into dur from effects where effects.id = effect;
+	call applyeffect(heroid, (effect, dur)::public."appliedEffect");
+end
+$$;
+
+
+--
+-- Name: applyeffect(integer, public."appliedEffect"); Type: PROCEDURE; Schema: public; Owner: -
+--
+
+CREATE PROCEDURE public.applyeffect(IN heroid integer, IN effect public."appliedEffect")
+    LANGUAGE plpgsql
+    AS $$
 begin
 	update hero
-	set effects = array_append(effects, (effect, (select effduration from effects where effects.id = effect))::public."appliedEffect")
+	set effects = array_append(effects, effect)
 	where id = heroid;
 end
 $$;
