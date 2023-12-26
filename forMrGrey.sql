@@ -8,3 +8,20 @@ begin
 end
 $BODY$;
 
+CREATE INDEX IF NOT EXISTS effects_type_idx
+    ON public.effects USING hash
+    (type)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS magicability_magicschool_idx
+    ON public.magicability USING hash
+    (magicschool)
+    TABLESPACE pg_default;
+
+CREATE VIEW lookingGoodPsyker AS 
+SELECT hero.name as "Имя псайкера", race as Раса, mana AS "Запас Маны", skillpoint as "Очки навыка",
+soulpoint as "Очки развития души", mindpoint as "Очки развития разума", godpowerpoint as "Божественные частицы",
+ranks.name as "Текущий ранг", mentalstength as "Ментальная сила", mysticism as Мистицизм,
+minddurability as "Ментальное сопротивление",
+magicskill as Владение, sourcepower as "Источник сил", magicrank as "Ранг магии" FROM psykers, hero, ranks
+WHERE hero.id = psykers.id and psykers.curRank = ranks.id 
