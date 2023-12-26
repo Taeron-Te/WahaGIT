@@ -263,7 +263,13 @@ AS $$
 BEGIN 
 	RETURN (mentalStength * (SELECT powerratio FROM public.ranks WHERE id = curRank))::int;
 END
-$$ LANGUAGE 'plpgsql';	
+$$ LANGUAGE 'plpgsql';
+--SERGEY
+CREATE TYPE usedspell AS
+(
+  spellid integer,
+  cooldown integer
+);	
 --SERGEY
 CREATE TABLE spellBook (
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
@@ -1310,12 +1316,7 @@ $BODY$;
 ALTER PROCEDURE public.healsquad(integer, integer)
     OWNER TO postgres;
 
---SERGEY
-CREATE TYPE usedspell AS
-(
-  spellid integer,
-  cooldown integer
-);
+
 
 
 --SERGEY
