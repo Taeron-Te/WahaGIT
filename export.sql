@@ -1121,12 +1121,6 @@ CREATE OR REPLACE VIEW public.squads
 ALTER TABLE public.squads
     OWNER TO postgres;
 --VLAD
-CREATE VIEW public.racestat AS
-SELECT
-    NULL::text AS name,
-    NULL::bigint AS count,
-    NULL::double precision AS countperc;
-
 CREATE OR REPLACE VIEW public.racestat
  AS
  SELECT DISTINCT race.name,
