@@ -251,7 +251,9 @@ INSERT INTO public.magicAbility(name, skillPointPrice,  magicSchool, castPrice, 
 ('Underground punch', 2, 5, 80, NULL, 200, 0),
 ('Destroy', 3, 5, 340, 4, 0, 5),
 
-('Earh brige', 2, 5, 100, NULL, 0, 0)
+('Earh brige', 2, 5, 100, NULL, 0, 0),
+('Gravity Power pulse', 0, 2, 2900, NULL, 890, 15),
+('Gravity Power', 0, 2, 500, 1, 320, 5)
 ;
 
 select * from magicAbility;
@@ -1315,7 +1317,7 @@ CREATE TYPE usedspell AS
   cooldown integer
 );
 
-------- WIP
+
 --SERGEY
 CREATE OR REPLACE PROCEDURE public.castspell(
   IN psykerid integer,
@@ -1359,3 +1361,64 @@ begin
   update spellBook set usedSpells = buf where id = psykerid;
 end
 $$ language 'plpgsql';
+
+--SERGEY
+create procedure craftSoulPoint(psykerid int) as
+$$
+begin
+  if (select soulShard from psykers where id = psykerid) >= 10
+  then
+    update psykers 
+      set soulShard = soulShard - 10, soulPoint = soulPoint + 1 
+    where id = psykerid;
+  end if;
+end
+$$ language 'plpgsql';
+
+--SERGEY
+create view armorPierce as 
+select ammotype.name, ammotype.value, string_agg(armour.name, ', ') from ammotype
+join armourLevel
+on armourLevel.value <= ammotype.value
+join armour
+on armourLevel.id = armour.apdLevel
+group by ammotype.name, ammotype.value;
+
+--SERGEY
+create view spellsRank as
+select magicability.name as spell, magicschools.name as school, dense_rank() over (partition by magicschool order by damage desc) as damageRank from magicability
+join magicschools
+on magicability.magicschool = magicschools.id
+order by magicschools.id;
+
+--SERGEY 
+create function spellIterator(title refcursor) returns refcursor as
+$$
+begin
+  open title for select * from magicability;
+  return title;
+end
+$$ language 'plpgsql'
+--SERGEY 
+create procedure spellIndexation(iscale double precision) as
+$$
+declare
+  cur refcursor;
+begin
+  cur = spelliterator('spells');
+  
+  loop
+  
+  move cur;
+  
+  exit when not found;
+  
+  update magicAbility
+    set damage = damage * iscale, castPrice = castPrice * iscale
+  where current of cur;
+  
+  end loop;
+  
+  close cur;
+end
+$$ language 'plpgsql'
