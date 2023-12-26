@@ -265,6 +265,7 @@ $$ LANGUAGE 'plpgsql';
 --SERGEY
 CREATE TABLE spellBook (
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
+    usedspells usedspell[] NOT NULL DEFAULT ARRAY[]::usedspell[],
 	idMAbility int[]
 );
 
@@ -1194,6 +1195,7 @@ declare
 	i public.appliedEffect;
 	buf public.appliedEffect[];
 begin
+    buf = ARRAY[]::public.appliedEffect[];
 	foreach i in array(select effects from hero where id = heroid)
 	loop
 		if i.durability - 1 > 0
@@ -1205,7 +1207,7 @@ begin
 	update hero set effects = buf where id = heroid;
 end
 $$;
---VLAd
+--VLAD
 CREATE OR REPLACE FUNCTION public.heroesiterator(
 	name refcursor)
     RETURNS refcursor
@@ -1306,3 +1308,54 @@ $BODY$;
 ALTER PROCEDURE public.healsquad(integer, integer)
     OWNER TO postgres;
 
+--SERGEY
+CREATE TYPE usedspell AS
+(
+  spellid integer,
+  cooldown integer
+);
+
+------- WIP
+--SERGEY
+CREATE OR REPLACE PROCEDURE public.castspell(
+  IN psykerid integer,
+  IN spell usedspell)
+LANGUAGE 'plpgsql'
+AS $BODY$
+begin
+  update spellBook
+  set usedSpells = array_append(usedSpells, spell)
+  where id = psykerid;
+end
+$BODY$;
+ALTER PROCEDURE public.castspell(integer, usedspell)
+    OWNER TO postgres;
+--SERGEY
+create procedure castSpell(psykerid int, spellid int) as
+$$
+declare
+  cooldown int;
+begin
+  select insecond into cooldown from magicability where id = spellid;
+  call castSpell(psykerid, (spellid, cooldown)::usedSpell);
+end
+$$ language 'plpgsql';
+--SERGEY
+create procedure tickSpells(psykerid int) as
+$$
+declare
+  i usedSpell;
+  buf usedSpell[];
+begin
+  buf = ARRAY[]::usedSpell[];
+  foreach i in array(select usedSpells from spellBook where id = psykerid)
+  loop
+    if i.cooldown - 1 > 0
+      then
+        i.cooldown = i.cooldown - 1;
+        buf = array_append(buf, i);
+    end if;
+  end loop;
+  update spellBook set usedSpells = buf where id = psykerid;
+end
+$$ language 'plpgsql';
