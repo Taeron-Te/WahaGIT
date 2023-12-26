@@ -25,3 +25,11 @@ ranks.name as "Текущий ранг", mentalstength as "Ментальная 
 minddurability as "Ментальное сопротивление",
 magicskill as Владение, sourcepower as "Источник сил", magicrank as "Ранг магии" FROM psykers, hero, ranks
 WHERE hero.id = psykers.id and psykers.curRank = ranks.id 
+
+create view topPsykers as  (with top  as (select race.name as racename, max(mentalstength) from psykers
+join hero on psykers.id = hero.id
+join race on hero.race = race.id
+group by grouping sets ((), (race.name))
+)
+select racename, hero.name from hero, top, psykers
+where hero.id=psykers.id and mentalstength = max)
