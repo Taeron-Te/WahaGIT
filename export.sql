@@ -1,3 +1,4 @@
+--SERGEY
 CREATE TABLE public.typeOfMA(
 	id int GENERATED ALWAYS AS IDENTITY UNIQUE,
 	name text NOT NULL
