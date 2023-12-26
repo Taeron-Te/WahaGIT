@@ -403,7 +403,7 @@ INSERT INTO public.attackAbility(
 
 ;
 
-select * from public.attackAbility
+select * from public.attackAbility;
 --VLAD
 CREATE TABLE IF NOT EXISTS public.armourAbility
 (
@@ -441,7 +441,7 @@ INSERT INTO public.armourAbility (name, range, doPointsPrice, type) VALUES
 ('Nano Repair', 0, 1, 4)
 ;
 
-SELECT * FROM public.armourAbility
+SELECT * FROM public.armourAbility;
 --VLAD
 CREATE TABLE IF NOT EXISTS public.moveAbility
 (
@@ -478,7 +478,7 @@ VALUES  ('Walk',                1, 1, 1),
         ('Darkness shift',      0.6, 1, 9)
         ;
 		
-SELECT * FROM moveAbility
+SELECT * FROM moveAbility;
 --VLAD
 CREATE TABLE IF NOT EXISTS public.weapon
 (
@@ -565,7 +565,7 @@ INSERT INTO public.weapon
 ('Cristal',             4, 1,5,         17, null, null, 28, null)
 ;
 SELECT * FROM weapon, public.attackAbility
-WHERE public.attackAbility.id = weapon.primaryAttack
+WHERE public.attackAbility.id = weapon.primaryAttack;
 --VLAD
 CREATE TYPE public.appliedEffect AS
 (
@@ -617,7 +617,7 @@ bonusE, bonusA, doPoints) VALUES
 ('Tyranid',     7, 1000, 0, 100000, 3, 5, 0, 0, 2),
 ('Tau',         5, 150, 0, 10,      1, 1, 1, 1, 1)
 ;
-SELECT * FROM race
+SELECT * FROM race;
 
 --VLAD
 CREATE TABLE IF NOT EXISTS public.class
@@ -663,7 +663,7 @@ INSERT INTO public.class(name, walkRange, bonusHealth, uniqueMove, classMeleeAtt
             ('Shadow Hunter',               30, 3500, 9, null, 0, 3),
             ('Psyker',                      10, 100,  1, null, 4, 2)
             ;
-SELECT * FROM public.class
+SELECT * FROM public.class;
 
 --VLAD
 
@@ -728,19 +728,9 @@ INSERT INTO public.armour (name, race, apdLevel, armour, bonusS, bonusDoPoints, 
 ('Mk.4 "Maximus"', 2, 14, 1700, 2,0, 6)
 ;
 
-SELECT * FROM armour
+SELECT * FROM armour;
 --VLAD
-CREATE FUNCTION public.armourracetrigger() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-begin
-	if (select race from armour where id = NEW."armourSet") != NEW.race
-		then 
-			raise exception 'armour race isn''t compatible with hero race';
-	end if;
-	return NEW;
-end
-$$;
+
 --VLAD
 CREATE FUNCTION public.armourracetrigger() RETURNS trigger
     LANGUAGE plpgsql
@@ -946,7 +936,35 @@ INSERT INTO public.hero
 (name,          family,    age, race,   class,  healthCur,  armourCur,  lead, effects) VALUES
 ('Immlerih',    'Codel',   24,  1,      9,      100,        0,          1,      ARRAY[]::appliedeffect[]);
 SELECT * FROM hero, public.class
-WHERE hero.class = public.class.id
+WHERE hero.class = public.class.id;
+
+CREATE FUNCTION public.heroview(heroid integer) RETURNS TABLE(property text, value text)
+    LANGUAGE plpgsql
+    AS $$
+declare
+	w1 integer;
+	w2 integer;
+	w3 integer;
+	w4 integer;
+begin
+	w1 = (select "primaryWeapon" from hero where id = heroid);
+	w2 = (select "secondWeapon" from hero where id = heroid);
+	w3 = (select "meleeWeapon" from hero where id = heroid);
+	w4 = (select "throwWeapon" from hero where id = heroid);
+	
+	return query (select 'hero name' as property, name as value
+	from hero where id = heroid
+	union
+	select 'primary weapon', name from weapon where id = w1
+	union
+	select 'second weapon', name from weapon where id = w2
+	union
+	select 'melee weapon', name from weapon where id = w3
+	union
+	select 'throw weapon', name from weapon where id = w4
+	);
+end
+$$;
 
 --SERGEY
 CREATE OR REPLACE FUNCTION public.ispsyker(
@@ -977,7 +995,7 @@ soulpoint as "Очки развития души", mindpoint as "Очки раз
 ranks.name as "Текущий ранг", mentalstength as "Ментальная сила", mysticism as Мистицизм,
 minddurability as "Ментальное сопротивление",
 magicskill as Владение, sourcepower as "Источник сил", magicrank as "Ранг магии" FROM psykers, hero, ranks
-WHERE hero.id = psykers.id and psykers.curRank = ranks.id 
+WHERE hero.id = psykers.id and psykers.curRank = ranks.id;
 --SERGEY
 create view topPsykers as  (with top  as (select race.name as racename, max(mentalstength) from psykers
 join hero on psykers.id = hero.id
@@ -985,7 +1003,7 @@ join race on hero.race = race.id
 group by grouping sets ((), (race.name))
 )
 select racename, hero.name from hero, top, psykers
-where hero.id=psykers.id and mentalstength = max)
+where hero.id=psykers.id and mentalstength = max);
 --SERGEY
 create view toppsykersforrank as WITH top AS (
          SELECT ranks.name AS rankname,
