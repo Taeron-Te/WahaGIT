@@ -805,10 +805,10 @@ VALUES  ('Deny', 'Aaron',       18, 1, 2, 100, 0, 1, ARRAY[]::appliedeffect[]),
 ;
 
 INSERT INTO public.hero(name, family,  age, race, class, healthCur, armourCur, lead, effects)
-VALUES  ('Bratigen', null,     154, 2, 2, 1500, 0, null, ARRAY[]::appliedeffect[]),
-        ('Gally', null,      95, 2, 2, 1500, 0, 7, ARRAY[]::appliedeffect[]),
-        ('Alex', null,     63, 2, 2, 1500, 0, 7, ARRAY[]::appliedeffect[]),
-        ('Vicor', null,       83, 2, 2, 1500, 0, 7, ARRAY[]::appliedeffect[]),
+VALUES  ('Bratigen', null,     154, 2, 3, 1500, 0, null, ARRAY[]::appliedeffect[]),
+        ('Gally', null,      95, 2, 3, 1500, 0, 7, ARRAY[]::appliedeffect[]),
+        ('Alex', null,     63, 2, 4, 1500, 0, 7, ARRAY[]::appliedeffect[]),
+        ('Vicor', null,       83, 2, 5, 1500, 0, 7, ARRAY[]::appliedeffect[]),
         ('Desteriel', null,      143, 2, 9, 1500, 0, 7, ARRAY[]::appliedeffect[])
         
 ;
@@ -894,42 +894,42 @@ CREATE OR REPLACE FUNCTION public.checkweapons()
     VOLATILE NOT LEAKPROOF
 AS $BODY$
 begin
-	if NEW."primaryWeapon" is not null then
-		if (select type from weapon where id = NEW."primaryWeapon") != 1
+	if NEW.primaryWeapon is not null then
+		if (select type from weapon where id = NEW.primaryWeapon) != 1
 			then raise exception 'primary weapon has uncompatible type';
 		end if;
 		
-		if (select "manaRegen">0 from weapon where id = NEW."primaryWeapon") and not ispsyker(NEW."id")
+		if (select manaRegen>0 from weapon where id = NEW.primaryWeapon) and not ispsyker(NEW.id)
 			then raise exception 'primary weapon is only available to psykers';
 		end if;
 	end if;
 	
-	if NEW."secondWeapon" is not null then
-		if (select type from weapon where id = NEW."secondWeapon") != 2
+	if NEW.secondWeapon is not null then
+		if (select type from weapon where id = NEW.secondWeapon) != 2
 			then raise exception 'second weapon has uncompatible type';
 		end if;
 		
-		if (select "manaRegen">0 from weapon where id = NEW."secondWeapon") and not ispsyker(NEW."id")
+		if (select manaRegen>0 from weapon where id = NEW.secondWeapon) and not ispsyker(NEW.id)
 			then raise exception 'second weapon is only available to psykers';
 		end if;
 	end if;
 	
-	if NEW."meleeWeapon" is not null then
-		if (select type from weapon where id = NEW."meleeWeapon") != 3
+	if NEW.meleeWeapon is not null then
+		if (select type from weapon where id = NEW.meleeWeapon) != 3
 			then raise exception 'melee weapon has uncompatible type';
 		end if;
 		
-		if (select "manaRegen">0 from weapon where id = NEW."meleeWeapon") and not ispsyker(NEW."id")
+		if (select manaRegen>0 from weapon where id = NEW.meleeWeapon) and not ispsyker(NEW.id)
 			then raise exception 'melee weapon is only available to psykers';
 		end if;
 	end if;
 	
-	if NEW."throwWeapon" is not null then
-		if (select type from weapon where id = NEW."throwWeapon") != 4
+	if NEW.throwWeapon is not null then
+		if (select type from weapon where id = NEW.throwWeapon) != 4
 			then raise exception 'throw weapon has uncompatible type';
 		end if;
 		
-		if (select "manaRegen">0 from weapon where id = NEW."throwWeapon") and not ispsyker(NEW."id")
+		if (select manaRegen>0 from weapon where id = NEW.throwWeapon) and not ispsyker(NEW.id)
 			then raise exception 'throw weapon is only available to psykers';
 		end if;
 	end if;
@@ -940,6 +940,7 @@ $BODY$;
 
 ALTER FUNCTION public.checkweapons()
     OWNER TO postgres;
+
 
 
 -- DROP TRIGGER IF EXISTS heroweapons ON public.hero;
@@ -953,6 +954,10 @@ CREATE OR REPLACE TRIGGER heroweapons
 -- Способность движения
 
 -- Функции
+
+-- FUNCTION: public.heroview(integer)
+
+-- DROP FUNCTION IF EXISTS public.heroview(integer);
 
 CREATE OR REPLACE FUNCTION public.heroview(
 	heroid integer)
@@ -969,10 +974,10 @@ declare
 	w3 integer;
 	w4 integer;
 begin
-	w1 = (select "primaryWeapon" from hero where id = heroid);
-	w2 = (select "secondWeapon" from hero where id = heroid);
-	w3 = (select "meleeWeapon" from hero where id = heroid);
-	w4 = (select "throwWeapon" from hero where id = heroid);
+	w1 = (select primaryWeapon from hero where id = heroid);
+	w2 = (select secondWeapon from hero where id = heroid);
+	w3 = (select meleeWeapon from hero where id = heroid);
+	w4 = (select throwWeapon from hero where id = heroid);
 	
 	return query (select 'hero name' as property, name as value
 	from hero where id = heroid
@@ -1141,23 +1146,40 @@ ALTER TABLE public.psykerscount
     OWNER TO postgres;
 
 --
+-- View: public.racestat
+
+-- DROP VIEW public.racestat;
+
 CREATE OR REPLACE VIEW public.racestat
  AS
- SELECT race.name,
+ SELECT DISTINCT race.name,
+    class.name AS classname,
         CASE
             WHEN max(hero.id) IS NULL THEN 0::bigint
-            ELSE count(*)
-        END AS count,
+            WHEN GROUPING(race.name) = 1 THEN count(hero.id) OVER ()
+            WHEN GROUPING(class.name) = 1 THEN count(hero.id) OVER (PARTITION BY race.name)
+            ELSE count(hero.id) OVER (PARTITION BY race.name, class.name)
+        END AS herocount,
         CASE
-            WHEN max(hero.id) IS NULL THEN 0::double precision
-            ELSE count(*)::double precision / count(*) OVER ()::double precision
-        END AS countperc
+            WHEN max(hero.id) IS NULL OR GROUPING(class.name) = 1 THEN ''::text
+            ELSE ((
+            CASE
+                WHEN max(hero.id) IS NULL THEN 0::bigint
+                WHEN GROUPING(race.name) = 1 THEN count(hero.id) OVER ()
+                WHEN GROUPING(class.name) = 1 THEN count(hero.id) OVER (PARTITION BY race.name)
+                ELSE count(hero.id) OVER (PARTITION BY race.name, class.name)
+            END::double precision * 100::double precision / count(hero.id) OVER (PARTITION BY race.name)::double precision)::text) || '%'::text
+        END AS classperc
    FROM hero
      RIGHT JOIN race ON hero.race = race.id
-  GROUP BY race.id;
+     LEFT JOIN class ON class.id = hero.class
+  GROUP BY ROLLUP(race.name, class.name, hero.id)
+  ORDER BY race.name;
 
 ALTER TABLE public.racestat
     OWNER TO postgres;
+
+
 
 --
 CREATE OR REPLACE VIEW public.squads
@@ -1191,3 +1213,77 @@ CREATE OR REPLACE VIEW public.squads
 ALTER TABLE public.squads
     OWNER TO postgres;
 
+-- FUNCTION: public.heroesiterator(refcursor)
+
+-- DROP FUNCTION IF EXISTS public.heroesiterator(refcursor);
+
+CREATE OR REPLACE FUNCTION public.heroesiterator(
+	name refcursor)
+    RETURNS refcursor
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+begin
+	open name for select * from hero;
+	return name;
+end
+$BODY$;
+
+ALTER FUNCTION public.heroesiterator(refcursor)
+    OWNER TO postgres;
+
+CREATE INDEX IF NOT EXISTS effects_type_idx
+    ON public.effects USING hash
+    (type)
+    TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS magicability_magicschool_idx
+    ON public.magicability USING hash
+    (magicschool)
+    TABLESPACE pg_default;
+
+CREATE VIEW lookingGoodPsyker AS 
+SELECT hero.name as "Имя псайкера", race as Раса, mana AS "Запас Маны", skillpoint as "Очки навыка",
+soulpoint as "Очки развития души", mindpoint as "Очки развития разума", godpowerpoint as "Божественные частицы",
+ranks.name as "Текущий ранг", mentalstength as "Ментальная сила", mysticism as Мистицизм,
+minddurability as "Ментальное сопротивление",
+magicskill as Владение, sourcepower as "Источник сил", magicrank as "Ранг магии" FROM psykers, hero, ranks
+WHERE hero.id = psykers.id and psykers.curRank = ranks.id; 
+
+create view topPsykers as  (with top  as (select race.name as racename, max(mentalstength) from psykers
+join hero on psykers.id = hero.id
+join race on hero.race = race.id
+group by grouping sets ((), (race.name))
+)
+select racename, hero.name from hero, top, psykers
+where hero.id=psykers.id and mentalstength = max);
+
+create view toppsykersforrank as WITH top AS (
+         SELECT ranks.name AS rankname,
+            max(psykers.mentalstength) AS max
+           FROM psykers
+             JOIN hero ON psykers.id = hero.id
+             JOIN ranks ON psykers.curRank = ranks.id
+          GROUP BY GROUPING SETS ((), (ranks.name))
+        )
+ SELECT top.rankname,
+    hero.name
+   FROM hero,
+    top,
+    psykers
+  WHERE hero.id = psykers.id AND psykers.mentalstength = top.max;
+
+CREATE INDEX IF NOT EXISTS armour_race_idx
+    ON public.armour USING hash
+    (race)
+    TABLESPACE pg_default;
+
+-- Index: weapon_type_idx
+
+-- DROP INDEX IF EXISTS public.weapon_type_idx;
+
+CREATE INDEX IF NOT EXISTS weapon_type_idx
+    ON public.weapon USING hash
+    (type)
+    TABLESPACE pg_default;
