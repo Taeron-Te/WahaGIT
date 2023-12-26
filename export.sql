@@ -987,6 +987,16 @@ CREATE INDEX IF NOT EXISTS magicability_magicschool_idx
     ON public.magicability USING hash
     (magicschool)
     TABLESPACE pg_default;
+--VLAD
+CREATE INDEX IF NOT EXISTS armour_race_idx
+ON public.armour USING hash
+(race)
+TABLESPACE pg_default;
+
+CREATE INDEX IF NOT EXISTS weapon_type_idx
+    ON public.weapon USING hash
+    (type)
+    TABLESPACE pg_default;
 
 --SERGEY
 CREATE VIEW lookingGoodPsyker AS 
@@ -1079,32 +1089,36 @@ UNION
           WHERE (race.id = mode() WITHIN GROUP (ORDER BY hero.race))) AS value
    FROM public.hero;
 --VLAD
-   CREATE VIEW public.squads AS
+CREATE OR REPLACE VIEW public.squads
+ AS
  WITH RECURSIVE r AS (
          SELECT hero.id,
-            (hero.name || '*'::text) AS name,
+            hero.name || '*'::text AS name,
             hero.lead,
             0 AS level,
-            (hero.id || ''::text) AS path
-           FROM public.hero
-          WHERE (hero.lead IS NULL)
+            hero.id || ''::text AS path
+           FROM hero
+          WHERE hero.lead IS NULL
         UNION
          SELECT hero.id,
             hero.name,
             hero.lead,
-            (r_1.level + 1) AS level,
-            ((r_1.path || '|'::text) || hero.id) AS path
-           FROM (r r_1
-             JOIN public.hero ON ((r_1.id = hero.lead)))
+            r_1.level + 1 AS level,
+            (r_1.path || '|'::text) || hero.id AS path
+           FROM r r_1
+             JOIN hero ON r_1.id = hero.lead
         )
- SELECT ((repeat('-'::text, (level * 3)) ||
+ SELECT (repeat('-'::text, level * 3) ||
         CASE
-            WHEN (level > 0) THEN '>'::text
+            WHEN level > 0 THEN '>'::text
             ELSE ''::text
-        END) || id) AS id,
+        END) || id AS id,
     name
    FROM r
   ORDER BY path;
+
+ALTER TABLE public.squads
+    OWNER TO postgres;
 --VLAD
 CREATE VIEW public.racestat AS
 SELECT
@@ -1112,19 +1126,34 @@ SELECT
     NULL::bigint AS count,
     NULL::double precision AS countperc;
 
-CREATE OR REPLACE VIEW public.racestat AS
- SELECT race.name,
+CREATE OR REPLACE VIEW public.racestat
+ AS
+ SELECT DISTINCT race.name,
+    class.name AS classname,
         CASE
-            WHEN (max(hero.id) IS NULL) THEN (0)::bigint
-            ELSE count(*)
-        END AS count,
+            WHEN max(hero.id) IS NULL THEN 0::bigint
+            WHEN GROUPING(race.name) = 1 THEN count(hero.id) OVER ()
+            WHEN GROUPING(class.name) = 1 THEN count(hero.id) OVER (PARTITION BY race.name)
+            ELSE count(hero.id) OVER (PARTITION BY race.name, class.name)
+        END AS herocount,
         CASE
-            WHEN (max(hero.id) IS NULL) THEN (0)::double precision
-            ELSE ((count(*))::double precision / (count(*) OVER ())::double precision)
-        END AS countperc
-   FROM (public.hero
-     RIGHT JOIN public.race ON ((hero.race = race.id)))
-  GROUP BY race.id;
+            WHEN max(hero.id) IS NULL OR GROUPING(class.name) = 1 THEN ''::text
+            ELSE ((
+            CASE
+                WHEN max(hero.id) IS NULL THEN 0::bigint
+                WHEN GROUPING(race.name) = 1 THEN count(hero.id) OVER ()
+                WHEN GROUPING(class.name) = 1 THEN count(hero.id) OVER (PARTITION BY race.name)
+                ELSE count(hero.id) OVER (PARTITION BY race.name, class.name)
+            END::double precision * 100::double precision / count(hero.id) OVER (PARTITION BY race.name)::double precision)::text) || '%'::text
+        END AS classperc
+   FROM hero
+     RIGHT JOIN race ON hero.race = race.id
+     LEFT JOIN class ON class.id = hero.class
+  GROUP BY ROLLUP(race.name, class.name, hero.id)
+  ORDER BY race.name;
+
+ALTER TABLE public.racestat
+    OWNER TO postgres;
 
 
 --SERGEY (VLAD?)
@@ -1181,4 +1210,104 @@ begin
 	update hero set effects = buf where id = heroid;
 end
 $$;
+--VLAd
+CREATE OR REPLACE FUNCTION public.heroesiterator(
+	name refcursor)
+    RETURNS refcursor
+    LANGUAGE 'plpgsql'
+    COST 100
+    VOLATILE PARALLEL UNSAFE
+AS $BODY$
+begin
+	open name for select * from hero;
+	return name;
+end
+$BODY$;
+
+ALTER FUNCTION public.heroesiterator(refcursor)
+    OWNER TO postgres;
+
+--VLAD
+
+create or replace procedure printdamage(heroid int) as
+$$
+declare
+	wpns cursor(hid int) for 
+		select name, primaryAttack, scndA, thrdA, fotyA, fivtyA from weapon
+		where id in ((select primaryWeapon from hero where id = hid),
+					 (select secondWeapon from hero where id = hid),
+					 (select meleeWeapon from hero where id = hid),
+					 (select throwWeapon from hero where id = hid));
+	
+	abils refcursor;
+	
+	abl record;
+	
+	sum int;
+begin
+
+	sum = 0;
+
+	for w in wpns(heroid)
+	loop
+		raise notice '%', w.name;
+		
+		open abils for select name, defDamage from attackability
+			where id in (w.primaryAttack, w.scndA, w.thrdA, w.fotyA, w.fivtyA);
+		
+		loop
+		
+		fetch abils into abl;
+		
+		exit when not found;
+		
+		raise notice '--->% %', abl.name, abl.defdamage;
+		
+		sum = sum + abl.defdamage;
+		
+		end loop;
+		
+		close abils;
+	end loop;
+	
+	raise notice '%', sum;
+end
+$$ language 'plpgsql';
+
+-- VLAD
+CREATE OR REPLACE PROCEDURE public.healsquad(
+	IN leader integer, IN hp integer)
+LANGUAGE 'plpgsql'
+AS $BODY$
+declare
+	heroes refcursor;
+	
+	curhero record;
+	
+	squad int[];
+begin
+	heroes = heroesiterator('newcursor');
+	
+	squad = squad || leader;
+	
+	loop
+	fetch heroes into curhero;
+	
+	exit when not found;
+	
+	if curhero.lead = any(squad) 
+	then 
+		raise notice '%', curhero.name;
+		squad = squad || curhero.id;
+		update hero set healthCur = healthCur + hp where current of heroes;
+	end if;
+	
+	end loop;
+	
+	close heroes;
+
+end
+$BODY$;
+ALTER PROCEDURE public.healsquad(integer, integer)
+    OWNER TO postgres;
 
