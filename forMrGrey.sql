@@ -33,3 +33,19 @@ group by grouping sets ((), (race.name))
 )
 select racename, hero.name from hero, top, psykers
 where hero.id=psykers.id and mentalstength = max)
+
+create view toppsykersforrank as WITH top AS (
+         SELECT ranks.name AS rankname,
+            max(psykers.mentalstength) AS max
+           FROM psykers
+             JOIN hero ON psykers.id = hero.id
+             JOIN ranks ON psykers.curRank = ranks.id
+          GROUP BY GROUPING SETS ((), (ranks.name))
+        )
+ SELECT top.rankname,
+    hero.name
+   FROM hero,
+    top,
+    psykers
+  WHERE hero.id = psykers.id AND psykers.mentalstength = top.max;
+
