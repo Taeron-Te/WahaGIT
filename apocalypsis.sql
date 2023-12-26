@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS public.armourAbility
         ON DELETE NO ACTION
         NOT VALID,
     CONSTRAINT armacheckdoPointPrice CHECK (doPointsPrice > 0) NOT VALID,
-    CONSTRAINT armacheckrange CHECK (range > 0::double precision) NOT VALID
+    CONSTRAINT armacheckrange CHECK (range >= 0::double precision) NOT VALID
 )
 
 TABLESPACE pg_default;
@@ -186,7 +186,7 @@ TABLESPACE pg_default;
 ALTER TABLE IF EXISTS public.class
     OWNER to postgres;
 
-INSERT INTO public.class(name, walkRange, bonusHealth, uniqueMove, classMeleeAttackAbility, bonusSkillPoint doPoints
+INSERT INTO public.class(name, walkRange, bonusHealth, uniqueMove, classMeleeAttackAbility, bonusSkillPoint, doPoints
 
 ) VALUES    ('Infantry',                    10, 500, 1, null, 0, 1),
             ('Stormtrooper',                10, 1500, 2, 15, 0, 1),
@@ -398,8 +398,8 @@ bonusE, bonusA, doPoints) VALUES
 ('Human',       5, 100, 0, 500,     0, 0, 0, 0, 1),
 ('Astartes',    15, 1500, 0, 1000,  3, 3, 3, 3, 2),
 ('Ogryn',       7, 4000, -300, 0,   5, 5, 2, 0, 1),
-('Eldar',       20, 700, 500, 4000, 0, -2, 5, 3, 3),
-('Demon',       20, 10000, 4000, 8000, 5, 5, 5, 5, 5),
+('Eldar',       20, 700, 500, 4000, 0, -2, 5, 3, 2),
+('Demon',       20, 10000, 4000, 8000, 5, 5, 5, 5, 2),
 ('Ork',         15, 2000, -100, 100000, 5, 1, 1, -2, 1),
 ('Tyranid',     7, 1000, 0, 100000, 3, 5, 0, 0, 2),
 ('Tau',         5, 150, 0, 10,      1, 1, 1, 1, 1)
@@ -467,28 +467,28 @@ ALTER TABLE IF EXISTS public.weapon
     OWNER to postgres;
 
 INSERT INTO public.weapon 
-(name,          type, minDamage, maxDamage, primaryAttack, scndA, thrdA, ammoType, manaRegen) VALUES
-('Lasgun "Kantriel"',   2, 1,   30,     5, 3, 8, 7, null),
-('Damned Lasgun',       2, 15,  150,    5, 8, 17, 7, 20),
-('Boltgun',             2, 50,  400,    1, 2, 3, 15, null ),
-('Carapted Boltgun',    2, 50,  550,    1, 2, 17, 28, 50),
-('Plasma gun',          2, 500, 6500,   9, null, null, 20, null),
+(name,          type, minDamage, maxDamage, primaryAttack,      scndA, thrdA, ammoType, manaRegen) VALUES
+('Lasgun "Kantriel"',   2, 1,   30,     5,  3, 8,       7, null),
+('Damned Lasgun',       2, 15,  150,    5,  8, 17,      7, 20),
+('Boltgun',             2, 50,  400,    1,  2, 3,       15, null ),
+('Carapted Boltgun',    2, 50,  550,    1,  2, 17,      28, 50),
+('Plasma gun',          2, 500, 6500,   9,  null,       null, 20, null),
 
 
-('Plasma pistol',       1, 500, 4000,   9, null, null, 20, null),
-('Stub pistol',         1, 1,   50,     1, 2, 3, 9, null),
-('Training Las-pistol', 1, 1,   15,     1, 2, 3, 5, null),
+('Plasma pistol',       1, 500, 4000,   9,  null, null, 20, null),
+('Stub pistol',         1, 1,   50,     1,  2, 3,       9, null),
+('Training Las-pistol', 1, 1,   15,     1,  2, 3,       5, null),
 
 
-('Chain sword',         3, null,200,    7, null, null, 16, null),
-('Monoatomic knife',    3, null,80,     29, null, null, 14, null),
-('Chotic knife',        3, null,110,    29, 28, null, 25, 50),
+('Chain sword',         3, null,200,    7,  null, null, 16, null),
+('Monoatomic knife',    3, null,80,     19, null, null, 14, null),
+('Chotic knife',        3, null,110,    19, 17, null,   25, 50),
 
 
-('Frag grenade',        4, 300, 800,    10,null, null, 14, null),
-('Krak grenade',        4, 400, 900,    11,null, null, 21, null),
-('Melta bomb',          4, 1500, 2000,  12,null, null, 21, null),
-('Cristal',             4, 1,5          28,null, null, 28, null)
+('Frag grenade',        4, 300, 800,    10, null, null, 14, null),
+('Krak grenade',        4, 400, 900,    11, null, null, 21, null),
+('Melta bomb',          4, 1500, 2000,  12, null, null, 21, null),
+('Cristal',             4, 1,5          18, null, null, 28, null)
 ;
 
 -- Типы данных
