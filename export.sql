@@ -56,26 +56,31 @@ INSERT INTO public.armourLevel(name, value) VALUES
 ('Shotgun Slug', 15),
 ('Blade', 15),
 ('Lasgun low-power', 15),
+
 ('High-Power Autogun', 20),
 ('Lasgun normal-power', 25),
 ('Lasgun high-power', 30),
 ('Low-power stubber', 30),
 ('High-power stubber', 35),
+
 ('Hot-shot Lasgun', 40),
 ('Double Hellgun shot', 50),
 ('Shotgun Armor-piercing', 50),
 ('Monoatomic blade', 60),
 ('Boltgun', 80),
+
 ('Chain sword', 100),
 ('Sniper boltgun', 100),
 ('Heavy bolter', 100),
 ('Autocanon', 120),
 ('Plasma', 140),
+
 ('Melta', 190),
 ('Gauss', 200),
 ('Tesla-ray', 220),
 ('Lascanon', 250),
 ('Power field', 400),
+
 ('Phase blade', 900),
 ('Gravity', 1000),
 ('Hell Energy', 1000)
