@@ -263,6 +263,9 @@ CREATE TABLE spellBook (
 	idMAbility int[]
 );
 
+INSERT INTO spellBook (idMAbility) VALUES (ARRAY[3, 4, 5, 6, 9, 10, 11, 12, 14, 15]);
+INSERT INTO spellBook (idMAbility) VALUES (ARRAY[1,2 ,3, 4, 5, 6, 9, 10, 11, 14, 16, 18, 20, 21]);
+
 CREATE OR REPLACE FUNCTION public.checkSpellId()
     RETURNS trigger
     LANGUAGE 'plpgsql'
@@ -314,10 +317,10 @@ CREATE TABLE public.psykers(
 	soulShard int NOT NULL DEFAULT 0,
 	godPowerPoint int NOT NULL DEFAULT 0,
 	curRank int NOT NULL DEFAULT 7,
-	mentalStength int NOT NULL CHECK (mentalStength > 10) DEFAULT 1,
-	mysticism int NOT NULL CHECK (mysticism > 10) DEFAULT 1,
-	mindDurability int NOT NULL CHECK (mindDurability > 10) DEFAULT 1,
-	magicSkill int NOT NULL CHECK (magicSkill > 10) DEFAULT 1,
+	mentalStength int NOT NULL CHECK (mentalStength <= 10) DEFAULT 1,
+  mysticism int NOT NULL CHECK (mysticism <= 10) DEFAULT 1,
+  mindDurability int NOT NULL CHECK (mindDurability <= 10) DEFAULT 1,
+  magicSkill int NOT NULL CHECK (magicSkill <= 10) DEFAULT 1,
 	sourcePower int NOT NULL GENERATED ALWAYS AS ((mentalStength + mysticism)/2::int) STORED,
 	magicRank int NOT NULL GENERATED ALWAYS AS ((mindDurability + magicSkill)/2::int) STORED,
 	spellBook int,
@@ -326,7 +329,15 @@ CREATE TABLE public.psykers(
 	FOREIGN KEY (spellBook) REFERENCES public.spellbook(id)
 );
 
-
+INSERT INTO public.psykers(id, mana, curRank, mentalStength, mysticism, mindDurability, magicSkill, spellBook) VALUES
+  (6, 1400, 4, 3, 3, 2, 2, 1)
+;
+INSERT INTO public.psykers(id, mana, skillPoint, soulPoint, mindPoint, soulShard, curRank, godPowerPoint, mentalStength, mysticism, mindDurability, magicSkill, spellBook) VALUES
+              (11, 3400, 4,      3,     3,        12,       2,     0,         7,         9,       6,         6,       2)
+;
+INSERT INTO public.psykers(id, mana, skillPoint, soulPoint, mindPoint, soulShard, curRank, godPowerPoint, mentalStength, mysticism, mindDurability, magicSkill, spellBook) VALUES
+              (12, 15400, 12,      14,     15,        23,       1,     49,     9,         10,       8,       10,     3)
+;
 
 select * from psykers;
 -- Абилка как ты будешь бить лицо
@@ -1287,3 +1298,88 @@ CREATE INDEX IF NOT EXISTS weapon_type_idx
     ON public.weapon USING hash
     (type)
     TABLESPACE pg_default;
+
+create or replace procedure printdamage(heroid int) as
+$$
+declare
+	wpns cursor(hid int) for 
+		select name, primaryAttack, scndA, thrdA, fotyA, fivtyA from weapon
+		where id in ((select primaryWeapon from hero where id = hid),
+					 (select secondWeapon from hero where id = hid),
+					 (select meleeWeapon from hero where id = hid),
+					 (select throwWeapon from hero where id = hid));
+	
+	abils refcursor;
+	
+	abl record;
+	
+	sum int;
+begin
+
+	sum = 0;
+
+	for w in wpns(heroid)
+	loop
+		raise notice '%', w.name;
+		
+		open abils for select name, defDamage from attackability
+			where id in (w.primaryAttack, w.scndA, w.thrdA, w.fotyA, w.fivtyA);
+		
+		loop
+		
+		fetch abils into abl;
+		
+		exit when not found;
+		
+		raise notice '--->% %', abl.name, abl.defdamage;
+		
+		sum = sum + abl.defdamage;
+		
+		end loop;
+		
+		close abils;
+	end loop;
+	
+	raise notice '%', sum;
+end
+$$ language 'plpgsql';
+
+-- PROCEDURE: public.healsquad(integer)
+
+-- DROP PROCEDURE IF EXISTS public.healsquad(integer);
+
+CREATE OR REPLACE PROCEDURE public.healsquad(
+	IN leader integer, IN hp integer)
+LANGUAGE 'plpgsql'
+AS $BODY$
+declare
+	heroes refcursor;
+	
+	curhero record;
+	
+	squad int[];
+begin
+	heroes = heroesiterator('newcursor');
+	
+	squad = squad || leader;
+	
+	loop
+	fetch heroes into curhero;
+	
+	exit when not found;
+	
+	if curhero.lead = any(squad) 
+	then 
+		raise notice '%', curhero.name;
+		squad = squad || curhero.id;
+		update hero set healthCur = healthCur + hp where current of heroes;
+	end if;
+	
+	end loop;
+	
+	close heroes;
+
+end
+$BODY$;
+ALTER PROCEDURE public.healsquad(integer, integer)
+    OWNER TO postgres;
