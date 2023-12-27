@@ -257,11 +257,11 @@ INSERT INTO public.magicAbility(name, skillPointPrice,  magicSchool, castPrice, 
 ;
 
 select * from magicAbility;
-
+--SERGEY
 CREATE FUNCTION mana (mentalStength int, curRank int) returns int
 AS $$
 BEGIN 
-	RETURN (mentalStength * (SELECT powerratio FROM public.ranks WHERE id = curRank))::int;
+	RETURN (80 * mentalStength * (SELECT powerratio FROM public.ranks WHERE id = curRank))::int;
 END
 $$ LANGUAGE 'plpgsql';
 --SERGEY
@@ -753,7 +753,7 @@ begin
 	return NEW;
 end
 $$;
-
+--VLAD
 CREATE FUNCTION public.checkeffectsid() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -771,7 +771,7 @@ begin
 	return NEW;
 end
 $$;
-
+--VLAD
 CREATE FUNCTION public.checkweapons() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -820,7 +820,7 @@ begin
 end
 $$;
 
-
+--VLAD
 CREATE TABLE IF NOT EXISTS public.hero
 (
     id integer NOT NULL GENERATED ALWAYS AS IDENTITY ( INCREMENT 1 START 1 MINVALUE 1 MAXVALUE 2147483647 CACHE 1 ),
@@ -895,7 +895,7 @@ ALTER TABLE IF EXISTS public.hero
 -- Trigger: checkarmourrace
 
 -- DROP TRIGGER IF EXISTS checkarmourrace ON public.hero;
-
+--VLAD
 CREATE OR REPLACE TRIGGER checkarmourrace
     BEFORE INSERT OR UPDATE 
     ON public.hero
@@ -905,7 +905,7 @@ CREATE OR REPLACE TRIGGER checkarmourrace
 -- Trigger: effectchecker
 
 -- DROP TRIGGER IF EXISTS effectchecker ON public.hero;
-
+--VLAD
 CREATE OR REPLACE TRIGGER effectchecker
     BEFORE INSERT OR UPDATE 
     ON public.hero
@@ -915,7 +915,7 @@ CREATE OR REPLACE TRIGGER effectchecker
 -- Trigger: heroweapons
 
 -- DROP TRIGGER IF EXISTS heroweapons ON public.hero;
-
+--VLAD
 CREATE OR REPLACE TRIGGER heroweapons
     BEFORE INSERT OR UPDATE 
     ON public.hero
@@ -1041,12 +1041,6 @@ create view toppsykersforrank as WITH top AS (
   WHERE hero.id = psykers.id AND psykers.mentalstength = top.max;
 
 --VLAD
-CREATE VIEW public.classstat AS
-SELECT
-    NULL::text AS name,
-    NULL::bigint AS count,
-    NULL::double precision AS countperc;
-
 CREATE OR REPLACE VIEW public.classstat AS
  SELECT class.name,
         CASE
@@ -1065,7 +1059,7 @@ CREATE OR REPLACE VIEW public.classstat AS
             WHEN (max(hero.id) IS NULL) THEN (0)::double precision
             ELSE ((count(*))::double precision / (count(*) OVER ())::double precision)
         END;
--- VLAD	
+--VLAD	
 CREATE VIEW public.herostat AS
  SELECT 'avg strength'::text AS property,
     (avg(hero.strength))::text AS value
@@ -1160,7 +1154,7 @@ ALTER TABLE public.racestat
     OWNER TO postgres;
 
 
---SERGEY (VLAD?)
+--VLAD
 CREATE OR REPLACE VIEW public.psykerscount AS
  SELECT race.name,
         CASE
@@ -1196,6 +1190,8 @@ begin
 end
 $$;
 --VLAD
+
+  --VLAD
 CREATE PROCEDURE public.tickeffects(IN heroid integer)
     LANGUAGE plpgsql
     AS $$
@@ -1233,7 +1229,6 @@ ALTER FUNCTION public.heroesiterator(refcursor)
     OWNER TO postgres;
 
 --VLAD
-
 create or replace procedure printdamage(heroid int) as
 $$
 declare
@@ -1279,7 +1274,7 @@ begin
 end
 $$ language 'plpgsql';
 
--- VLAD
+--VLAD
 CREATE OR REPLACE PROCEDURE public.healsquad(
 	IN leader integer, IN hp integer)
 LANGUAGE 'plpgsql'
@@ -1399,9 +1394,9 @@ begin
   open title for select * from magicability;
   return title;
 end
-$$ language 'plpgsql'
+$$ language 'plpgsql';
 --SERGEY 
-create procedure spellIndexation(iscale double precision) as
+create procedure spellIndexation(damageM int, priceM int) as
 $$
 declare
   cur refcursor;
@@ -1415,11 +1410,55 @@ begin
   exit when not found;
   
   update magicAbility
-    set damage = damage * iscale, castPrice = castPrice * iscale
+    set damage = damage * damageM, castPrice = castPrice * priceM
   where current of cur;
   
   end loop;
   
   close cur;
 end
-$$ language 'plpgsql'
+$$ language 'plpgsql';
+
+--SERGEY
+create procedure changeMana(raceid int) as
+$$
+declare
+  cur cursor(r int) for
+    select psykers.id,  curRank from psykers
+  join hero on hero.id = psykers.id
+  where race = r;
+begin
+  
+  for psyker in cur(raceid)
+  loop
+  update psykers 
+    set mana = mana(5, psyker.currank)
+  where id = psyker.id;
+  end loop;
+  
+end
+$$ language 'plpgsql';
+--SERGEY
+create procedure incDurEffects() as
+$$
+declare
+  efs refcursor;
+  effect record;
+begin
+  open efs for select * from effects;
+  
+  loop
+  
+    fetch efs into effect;
+    
+    exit when not found;
+    
+    update effects
+      set effDuration = effDuration + 1
+    where id = effect.id;
+    
+  end loop;
+  
+  close efs;
+end
+$$ language 'plpgsql':
