@@ -307,9 +307,9 @@ CREATE OR REPLACE TRIGGER spellBookChecker
     FOR EACH ROW
     EXECUTE FUNCTION public.checkSpellId();
 	
-INSERT INTO spellBook (idMAbility) VALUES (ARRAY[1,2 ,3, 4, 5, 6, 9, 10, 11]);
-INSERT INTO spellBook (idMAbility) VALUES (ARRAY[3, 4, 5, 6, 9, 10, 11, 12, 14, 15]);
-INSERT INTO spellBook (idMAbility) VALUES (ARRAY[1,2 ,3, 4, 5, 6, 9, 10, 11, 14, 16, 18, 20, 21]);
+INSERT INTO spellBook (idMAbility) VALUES (ARRAY[1,2 ,3, 4, 5, 6, 9, 10, 11]),
+(ARRAY[3, 4, 5, 6, 9, 10, 11, 12, 14, 15]),
+(ARRAY[1,2 ,3, 4, 5, 6, 9, 10, 11, 14, 16, 18, 20, 21]);
 
 CREATE PROCEDURE addSpell(i int) as $$
 BEGIN
@@ -1323,7 +1323,7 @@ AS $BODY$
 begin
   update spellBook
   set usedSpells = array_append(usedSpells, spell)
-  where id = psykerid;
+  where id = (select spellbook from psykers where id = psykerid);
 end
 $BODY$;
 ALTER PROCEDURE public.castspell(integer, usedspell)
@@ -1462,3 +1462,4 @@ begin
   close efs;
 end
 $$ language 'plpgsql':
+
